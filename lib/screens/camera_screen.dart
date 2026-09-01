@@ -22,6 +22,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   FrameStyle _selectedFrame = FrameStyle.classic;
   String _clubName = '';
   String _comment = '';
+  List<String> _clubNameHistory = [];
+  List<String> _commentHistory = [];
   bool _busy = false;
 
   @override
@@ -50,12 +52,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     final clubName = await SettingsService.loadClubName();
     final comment = await SettingsService.loadComment();
     final frameIndex = await SettingsService.loadFrameIndex();
+    final clubNameHistory = await SettingsService.loadClubNameHistory();
+    final commentHistory = await SettingsService.loadCommentHistory();
     if (!mounted) return;
     setState(() {
       _clubName = clubName;
       _comment = comment;
       _selectedFrame =
           FrameStyle.values[frameIndex.clamp(0, FrameStyle.values.length - 1)];
+      _clubNameHistory = clubNameHistory;
+      _commentHistory = commentHistory;
     });
   }
 
@@ -91,6 +97,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _editText({
     required String title,
     required String initial,
+    required List<String> history,
     required ValueChanged<String> onSave,
   }) async {
     final controller = TextEditingController(text: initial);
@@ -98,7 +105,32 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
-        content: TextField(controller: controller, autofocus: true, maxLength: 30),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(controller: controller, autofocus: true, maxLength: 30),
+              if (history.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('저장된 목록에서 선택',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: history
+                      .map((item) => ActionChip(
+                            label: Text(item),
+                            onPressed: () => Navigator.pop(ctx, item),
+                          ))
+                      .toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
           TextButton(
@@ -256,9 +288,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 onTap: () => _editText(
                   title: '산악회 이름',
                   initial: _clubName,
-                  onSave: (value) {
+                  history: _clubNameHistory,
+                  onSave: (value) async {
                     setState(() => _clubName = value);
-                    SettingsService.saveClubName(value);
+                    await SettingsService.saveClubName(value);
+                    final history = await SettingsService.loadClubNameHistory();
+                    if (mounted) setState(() => _clubNameHistory = history);
                   },
                 ),
               ),
@@ -284,9 +319,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 onTap: () => _editText(
                   title: '한마디 (멘트)',
                   initial: _comment,
-                  onSave: (value) {
+                  history: _commentHistory,
+                  onSave: (value) async {
                     setState(() => _comment = value);
-                    SettingsService.saveComment(value);
+                    await SettingsService.saveComment(value);
+                    final history = await SettingsService.loadCommentHistory();
+                    if (mounted) setState(() => _commentHistory = history);
                   },
                 ),
               ),

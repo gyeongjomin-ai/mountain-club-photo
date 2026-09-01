@@ -4,6 +4,9 @@ class SettingsService {
   static const _keyClubName = 'club_name';
   static const _keyComment = 'comment';
   static const _keyFrameIndex = 'frame_index';
+  static const _keyClubNameHistory = 'club_name_history';
+  static const _keyCommentHistory = 'comment_history';
+  static const _maxHistoryEntries = 20;
 
   static Future<String> loadClubName() async {
     final prefs = await SharedPreferences.getInstance();
@@ -13,6 +16,14 @@ class SettingsService {
   static Future<void> saveClubName(String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyClubName, value);
+    if (value.trim().isNotEmpty) {
+      await _addToHistory(prefs, _keyClubNameHistory, value);
+    }
+  }
+
+  static Future<List<String>> loadClubNameHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyClubNameHistory) ?? [];
   }
 
   static Future<String> loadComment() async {
@@ -23,6 +34,25 @@ class SettingsService {
   static Future<void> saveComment(String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyComment, value);
+    if (value.trim().isNotEmpty) {
+      await _addToHistory(prefs, _keyCommentHistory, value);
+    }
+  }
+
+  static Future<List<String>> loadCommentHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyCommentHistory) ?? [];
+  }
+
+  static Future<void> _addToHistory(
+      SharedPreferences prefs, String key, String value) async {
+    final history = prefs.getStringList(key) ?? [];
+    history.remove(value);
+    history.insert(0, value);
+    if (history.length > _maxHistoryEntries) {
+      history.removeRange(_maxHistoryEntries, history.length);
+    }
+    await prefs.setStringList(key, history);
   }
 
   static Future<int> loadFrameIndex() async {
