@@ -25,4 +25,12 @@ extension FrameStyleLabel on FrameStyle {
         FrameStyle.lanternGorge => 'assets/frames/lantern_gorge.png',
         _ => null,
       };
+
+  /// 사진 박스 아래쪽과 삽화 하단 사이 여백의 세로 중심 위치(0~1, 캔버스 높이 기준).
+  /// 산악회 이름/한마디 캡션을 이 지점에 겹쳐 그린다.
+  double? get captionCenterYFraction => switch (this) {
+        FrameStyle.templeValley => 0.87,
+        FrameStyle.lanternGorge => 0.845,
+        _ => null,
+      };
 }

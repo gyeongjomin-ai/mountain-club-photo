@@ -8,6 +8,7 @@ import 'package:gal/gal.dart';
 
 import '../models/frame_style.dart';
 import '../widgets/frame_painter.dart';
+import '../widgets/illustrated_caption_painter.dart';
 
 class PreviewScreen extends StatefulWidget {
   final Uint8List imageBytes;
@@ -102,6 +103,13 @@ class _PreviewScreenState extends State<PreviewScreen> {
     }
     canvas.drawImageRect(image, srcRect, Rect.fromLTWH(0, 0, outW, outH), Paint());
     canvas.drawImage(frameImage, Offset.zero, Paint());
+
+    IllustratedCaptionPainter(
+      style: widget.frameStyle,
+      clubName: widget.clubName.isEmpty ? '산악회' : widget.clubName,
+      dateText: _dateText,
+      comment: widget.comment,
+    ).paint(canvas, Size(outW, outH));
 
     final picture = recorder.endRecording();
     final outputImage = await picture.toImage(outW.toInt(), outH.toInt());

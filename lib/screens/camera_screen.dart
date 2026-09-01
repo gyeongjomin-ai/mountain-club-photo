@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/frame_style.dart';
 import '../services/settings_service.dart';
 import '../widgets/frame_painter.dart';
+import '../widgets/illustrated_caption_painter.dart';
 import 'preview_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -97,7 +98,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _editText({
     required String title,
     required String initial,
-    required List<String> history,
     required ValueChanged<String> onSave,
   }) async {
     final controller = TextEditingController(text: initial);
@@ -105,32 +105,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(controller: controller, autofocus: true, maxLength: 30),
-              if (history.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text('저장된 목록에서 선택',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: history
-                      .map((item) => ActionChip(
-                            label: Text(item),
-                            onPressed: () => Navigator.pop(ctx, item),
-                          ))
-                      .toList(),
-                ),
-              ],
-            ],
-          ),
-        ),
+        content: TextField(controller: controller, autofocus: true, maxLength: 30),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
           TextButton(
@@ -140,6 +115,58 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       ),
     );
     if (result != null) onSave(result);
+  }
+
+  // 나의 산악회 / 나의 멘트: 저장된 목록에서 고르거나(항목 탭), 오른쪽 X로 지운다.
+  Future<void> _pickFromHistory({
+    required String title,
+    required List<String> history,
+    required Future<void> Function(String value) removeItem,
+    required ValueChanged<String> onSelect,
+  }) async {
+    final items = List<String>.from(history);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: items.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('저장된 항목이 없습니다', style: TextStyle(color: Colors.grey)),
+                  )
+                : ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 320),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        return ListTile(
+                          dense: true,
+                          title: Text(item),
+                          onTap: () => Navigator.pop(ctx, item),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () async {
+                              await removeItem(item);
+                              setDialogState(() => items.removeAt(index));
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('닫기')),
+          ],
+        ),
+      ),
+    );
+    if (result != null) onSelect(result);
   }
 
   Future<void> _capture() async {
@@ -193,7 +220,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                         }
                         return Center(
                           child: _selectedFrame.isIllustrated
-                              ? _buildIllustratedPreview()
+                              ? _buildIllustratedPreview(dateText)
                               : AspectRatio(
                                   aspectRatio: 1 / _controller!.value.aspectRatio,
                                   child: Stack(
@@ -226,7 +253,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   // 일러스트 프레임(사찰/계곡)은 사진 전체를 감싸는 삽화라서 카메라 화면도
   // 삽화의 가로세로 비율(가로로 넓음)에 맞춰야 한다 - 카메라 프리뷰는 기존에
   // 검증된 세로 비율(1/aspectRatio)로 채운 뒤 cover로 잘라서 채워 넣는다.
-  Widget _buildIllustratedPreview() {
+  Widget _buildIllustratedPreview(String dateText) {
     final camAspect = 1 / _controller!.value.aspectRatio;
     return AspectRatio(
       aspectRatio: illustratedFrameAspectRatio,
@@ -244,6 +271,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             ),
           ),
           Image.asset(_selectedFrame.assetPath!, fit: BoxFit.fill),
+          CustomPaint(
+            painter: IllustratedCaptionPainter(
+              style: _selectedFrame,
+              clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
+              dateText: dateText,
+              comment: _comment,
+            ),
+          ),
         ],
       ),
     );
@@ -319,13 +354,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _editButton(
-                icon: Icons.groups,
-                label: _clubName.isEmpty ? '산악회 이름' : _clubName,
+              _miniButton(
+                icon: Icons.group_add,
+                label: '산악회 추가',
                 onTap: () => _editText(
-                  title: '산악회 이름',
+                  title: '산악회 추가',
                   initial: _clubName,
-                  history: _clubNameHistory,
                   onSave: (value) async {
                     setState(() => _clubName = value);
                     await SettingsService.saveClubName(value);
@@ -333,6 +367,22 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     if (mounted) setState(() => _clubNameHistory = history);
                   },
                 ),
+              ),
+              _miniButton(
+                icon: Icons.groups,
+                label: '나의 산악회',
+                onTap: () => _pickFromHistory(
+                  title: '나의 산악회',
+                  history: _clubNameHistory,
+                  removeItem: SettingsService.removeClubNameFromHistory,
+                  onSelect: (value) async {
+                    setState(() => _clubName = value);
+                    await SettingsService.saveClubName(value);
+                  },
+                ).then((_) async {
+                  final history = await SettingsService.loadClubNameHistory();
+                  if (mounted) setState(() => _clubNameHistory = history);
+                }),
               ),
               GestureDetector(
                 onTap: _capture,
@@ -350,13 +400,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       : null,
                 ),
               ),
-              _editButton(
+              _miniButton(
                 icon: Icons.edit_note,
-                label: _comment.isEmpty ? '한마디' : _comment,
+                label: '멘트 추가',
                 onTap: () => _editText(
-                  title: '한마디 (멘트)',
+                  title: '멘트 추가',
                   initial: _comment,
-                  history: _commentHistory,
                   onSave: (value) async {
                     setState(() => _comment = value);
                     await SettingsService.saveComment(value);
@@ -365,6 +414,22 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   },
                 ),
               ),
+              _miniButton(
+                icon: Icons.bookmark,
+                label: '나의 멘트',
+                onTap: () => _pickFromHistory(
+                  title: '나의 멘트',
+                  history: _commentHistory,
+                  removeItem: SettingsService.removeCommentFromHistory,
+                  onSelect: (value) async {
+                    setState(() => _comment = value);
+                    await SettingsService.saveComment(value);
+                  },
+                ).then((_) async {
+                  final history = await SettingsService.loadCommentHistory();
+                  if (mounted) setState(() => _commentHistory = history);
+                }),
+              ),
             ],
           ),
         ],
@@ -372,7 +437,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     );
   }
 
-  Widget _editButton({
+  Widget _miniButton({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -380,13 +445,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 100,
+        width: 72,
         child: Column(
           children: [
-            Icon(icon, color: Colors.white70),
+            Icon(icon, color: Colors.white70, size: 20),
+            const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
+              style: const TextStyle(color: Colors.white70, fontSize: 9.5),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,

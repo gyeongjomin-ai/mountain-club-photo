@@ -26,6 +26,13 @@ class SettingsService {
     return prefs.getStringList(_keyClubNameHistory) ?? [];
   }
 
+  static Future<void> removeClubNameFromHistory(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = prefs.getStringList(_keyClubNameHistory) ?? [];
+    history.remove(value);
+    await prefs.setStringList(_keyClubNameHistory, history);
+  }
+
   static Future<String> loadComment() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyComment) ?? '';
@@ -42,6 +49,13 @@ class SettingsService {
   static Future<List<String>> loadCommentHistory() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_keyCommentHistory) ?? [];
+  }
+
+  static Future<void> removeCommentFromHistory(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final history = prefs.getStringList(_keyCommentHistory) ?? [];
+    history.remove(value);
+    await prefs.setStringList(_keyCommentHistory, history);
   }
 
   static Future<void> _addToHistory(
