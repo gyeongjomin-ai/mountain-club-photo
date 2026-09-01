@@ -101,12 +101,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     setState(() => _busy = true);
     try {
       final file = await controller.takePicture();
+      // XFile.readAsBytes()로 바로 읽는다 - dart:io의 File(path)는 웹에서 아예 지원되지
+      // 않고(카메라 캡처 결과가 blob: URL이라 File로 열 수도 없음), XFile은 모바일/웹 양쪽에서
+      // 똑같이 동작해서 플랫폼 분기 없이 PreviewScreen까지 바이트로만 넘기면 된다.
+      final bytes = await file.readAsBytes();
       if (!mounted) return;
       await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => PreviewScreen(
-            imagePath: file.path,
+            imageBytes: bytes,
             frameStyle: _selectedFrame,
             clubName: _clubName,
             comment: _comment,
