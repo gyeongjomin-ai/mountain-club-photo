@@ -104,7 +104,7 @@ class PhotoFramePainter extends CustomPainter {
     final bannerHeight = size.height * 0.16;
     final bannerRect = Rect.fromLTWH(border, size.height - border - bannerHeight,
         size.width - border * 2, bannerHeight);
-    canvas.drawRect(bannerRect, Paint()..color = navy.withOpacity(0.85));
+    canvas.drawRect(bannerRect, Paint()..color = navy.withValues(alpha: 0.85));
     canvas.drawLine(
       Offset(bannerRect.left + short * 0.05, bannerRect.top),
       Offset(bannerRect.right - short * 0.05, bannerRect.top),
@@ -177,7 +177,7 @@ class PhotoFramePainter extends CustomPainter {
           height: short * 0.09),
       Radius.circular(short * 0.045),
     );
-    canvas.drawRRect(badgeRect, Paint()..color = darkGreen.withOpacity(0.88));
+    canvas.drawRRect(badgeRect, Paint()..color = darkGreen.withValues(alpha: 0.88));
     _text(canvas,
         text: clubName,
         center: badgeRect.center,
@@ -193,7 +193,7 @@ class PhotoFramePainter extends CustomPainter {
       stripRect,
       Paint()
         ..shader = LinearGradient(
-          colors: [Colors.black.withOpacity(0.0), Colors.black.withOpacity(0.65)],
+          colors: [Colors.black.withValues(alpha: 0.0), Colors.black.withValues(alpha: 0.65)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ).createShader(stripRect),
@@ -228,7 +228,7 @@ class PhotoFramePainter extends CustomPainter {
         Rect.fromLTWH(0, size.height - barHeight, size.width, barHeight), barPaint);
 
     final holeRadius = barHeight * 0.16;
-    final holePaint = Paint()..color = Colors.white.withOpacity(0.85);
+    final holePaint = Paint()..color = Colors.white.withValues(alpha: 0.85);
     final holeSpacing = holeRadius * 4.2;
     final holeCount = math.max(2, (size.width / holeSpacing).floor());
     final startX = (size.width - (holeCount - 1) * holeSpacing) / 2;
@@ -331,7 +331,7 @@ class PhotoFramePainter extends CustomPainter {
       stripRect,
       Paint()
         ..shader = LinearGradient(
-          colors: [Colors.black.withOpacity(0.0), Colors.black.withOpacity(0.7)],
+          colors: [Colors.black.withValues(alpha: 0.0), Colors.black.withValues(alpha: 0.7)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ).createShader(stripRect),
