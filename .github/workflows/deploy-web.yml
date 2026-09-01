@@ -1,0 +1,46 @@
+name: Deploy Flutter web to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포 도중 새 배포가 겹치지 않게 - 진행 중인 배포는 취소하지 않고 대기시킨다.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      # GitHub Pages 프로젝트 사이트는 /mountain-club-photo/ 경로로 서빙되므로 base-href를 맞춰야
+      # 리소스(js/폰트/아이콘) 경로가 안 깨진다.
+      - run: flutter build web --release --base-href /mountain-club-photo/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

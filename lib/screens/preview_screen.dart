@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 
@@ -9,14 +9,14 @@ import '../models/frame_style.dart';
 import '../widgets/frame_painter.dart';
 
 class PreviewScreen extends StatefulWidget {
-  final String imagePath;
+  final Uint8List imageBytes;
   final FrameStyle frameStyle;
   final String clubName;
   final String comment;
 
   const PreviewScreen({
     super.key,
-    required this.imagePath,
+    required this.imageBytes,
     required this.frameStyle,
     required this.clubName,
     required this.comment,
@@ -42,8 +42,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
   }
 
   Future<void> _compose() async {
-    final bytes = await File(widget.imagePath).readAsBytes();
-    final codec = await ui.instantiateImageCodec(bytes);
+    final codec = await ui.instantiateImageCodec(widget.imageBytes);
     final frame = await codec.getNextFrame();
     final image = frame.image;
     final width = image.width.toDouble();
@@ -70,6 +69,13 @@ class _PreviewScreenState extends State<PreviewScreen> {
   Future<void> _save() async {
     final composed = _composed;
     if (composed == null || _saving) return;
+    // gal 패키지는 안드로이드/iOS/macOS만 지원하고 웹은 지원하지 않는다 - 웹에서 그대로
+    // 호출하면 예외가 나므로, 미리보기 확인용 웹 빌드에서는 안내만 보여준다.
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('웹 미리보기에서는 갤러리 저장을 지원하지 않습니다. 앱(APK/iOS)에서 저장해주세요.')));
+      return;
+    }
     setState(() => _saving = true);
     try {
       final hasAccess = await Gal.hasAccess() || await Gal.requestAccess();
