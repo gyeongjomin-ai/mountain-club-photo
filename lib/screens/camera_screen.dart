@@ -131,7 +131,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         builder: (ctx, setDialogState) => AlertDialog(
           title: Text(title),
           content: SizedBox(
-            width: double.maxFinite,
+            width: 320,
             child: items.isEmpty
                 ? const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
