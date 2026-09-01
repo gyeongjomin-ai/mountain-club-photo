@@ -33,4 +33,13 @@ extension FrameStyleLabel on FrameStyle {
         FrameStyle.lanternGorge => 0.845,
         _ => null,
       };
+
+  /// 사진이 들어갈 투명 창의 위치(캔버스 크기 대비 0~1 비율, left/top/right/bottom).
+  /// 세로로 긴 카메라 사진을 이 창 안에 꽉 채우려고 cover로 자르면 창 자체가
+  /// 가로로 넓어서 지나치게 확대돼 보이므로, contain으로 맞출 때 기준 크기로 쓴다.
+  List<double>? get holeFraction => switch (this) {
+        FrameStyle.templeValley => const [0.2674, 0.2474, 0.7298, 0.7546],
+        FrameStyle.lanternGorge => const [0.3224, 0.2188, 0.6772, 0.6992],
+        _ => null,
+      };
 }

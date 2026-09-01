@@ -255,31 +255,48 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   // 검증된 세로 비율(1/aspectRatio)로 채운 뒤 cover로 잘라서 채워 넣는다.
   Widget _buildIllustratedPreview(String dateText) {
     final camAspect = 1 / _controller!.value.aspectRatio;
+    final hole = _selectedFrame.holeFraction!;
     return AspectRatio(
       aspectRatio: illustratedFrameAspectRatio,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ClipRect(
-            child: FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                width: 1000 * camAspect,
-                height: 1000,
-                child: CameraPreview(_controller!),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          final holeRect =
+              Rect.fromLTRB(hole[0] * w, hole[1] * h, hole[2] * w, hole[3] * h);
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // 세로로 긴 카메라 화면을 가로로 넓은 창에 cover로 꽉 채우면 지나치게
+              // 확대돼 보이므로, 자르지 않고 창 안에 contain으로 통째로 넣는다.
+              Positioned.fromRect(
+                rect: holeRect,
+                child: Container(
+                  color: const Color(0xFFF0E6D2),
+                  child: ClipRect(
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: 1000 * camAspect,
+                        height: 1000,
+                        child: CameraPreview(_controller!),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          Image.asset(_selectedFrame.assetPath!, fit: BoxFit.fill),
-          CustomPaint(
-            painter: IllustratedCaptionPainter(
-              style: _selectedFrame,
-              clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
-              dateText: dateText,
-              comment: _comment,
-            ),
-          ),
-        ],
+              Image.asset(_selectedFrame.assetPath!, fit: BoxFit.fill),
+              CustomPaint(
+                painter: IllustratedCaptionPainter(
+                  style: _selectedFrame,
+                  clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
+                  dateText: dateText,
+                  comment: _comment,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
