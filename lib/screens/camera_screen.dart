@@ -259,7 +259,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     final camAspect = 1 / _controller!.value.aspectRatio;
     final hole = _selectedFrame.holeFraction!;
     return AspectRatio(
-      aspectRatio: illustratedFrameAspectRatio,
+      aspectRatio: _selectedFrame.frameAspectRatio,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final w = constraints.maxWidth;
