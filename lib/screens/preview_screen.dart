@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:gal/gal.dart';
 
 import '../models/frame_style.dart';
@@ -48,6 +49,17 @@ class _PreviewScreenState extends State<PreviewScreen> {
     final width = image.width.toDouble();
     final height = image.height.toDouble();
 
+    final Uint8List bytes;
+    if (widget.frameStyle.isIllustrated) {
+      bytes = await _composeIllustrated(image, width, height);
+    } else {
+      bytes = await _composePainted(image, width, height);
+    }
+    if (!mounted) return;
+    setState(() => _composed = bytes);
+  }
+
+  Future<Uint8List> _composePainted(ui.Image image, double width, double height) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
     canvas.drawImage(image, Offset.zero, Paint());
@@ -62,8 +74,39 @@ class _PreviewScreenState extends State<PreviewScreen> {
     final picture = recorder.endRecording();
     final outputImage = await picture.toImage(width.toInt(), height.toInt());
     final byteData = await outputImage.toByteData(format: ui.ImageByteFormat.png);
-    if (!mounted) return;
-    setState(() => _composed = byteData!.buffer.asUint8List());
+    return byteData!.buffer.asUint8List();
+  }
+
+  // 사찰/계곡 프레임은 사진 위에 얇은 테두리를 그리는 방식이 아니라, 가운데가
+  // 뚫린 삽화 전체가 캔버스를 채우는 방식이라 삽화의 가로세로 비율을 그대로
+  // 최종 캔버스 크기로 쓰고, 사진은 그 안에서 cover로 채운 뒤 삽화를 위에 덮는다.
+  Future<Uint8List> _composeIllustrated(ui.Image image, double width, double height) async {
+    final assetData = await rootBundle.load(widget.frameStyle.assetPath!);
+    final frameCodec = await ui.instantiateImageCodec(assetData.buffer.asUint8List());
+    final frameImage = (await frameCodec.getNextFrame()).image;
+    final outW = frameImage.width.toDouble();
+    final outH = frameImage.height.toDouble();
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, outW, outH));
+
+    final photoAspect = width / height;
+    final canvasAspect = outW / outH;
+    final Rect srcRect;
+    if (photoAspect > canvasAspect) {
+      final cropWidth = height * canvasAspect;
+      srcRect = Rect.fromLTWH((width - cropWidth) / 2, 0, cropWidth, height);
+    } else {
+      final cropHeight = width / canvasAspect;
+      srcRect = Rect.fromLTWH(0, (height - cropHeight) / 2, width, cropHeight);
+    }
+    canvas.drawImageRect(image, srcRect, Rect.fromLTWH(0, 0, outW, outH), Paint());
+    canvas.drawImage(frameImage, Offset.zero, Paint());
+
+    final picture = recorder.endRecording();
+    final outputImage = await picture.toImage(outW.toInt(), outH.toInt());
+    final byteData = await outputImage.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
   }
 
   Future<void> _save() async {

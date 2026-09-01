@@ -192,23 +192,26 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                           return const Center(child: CircularProgressIndicator());
                         }
                         return Center(
-                          child: AspectRatio(
-                            aspectRatio: 1 / _controller!.value.aspectRatio,
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                CameraPreview(_controller!),
-                                CustomPaint(
-                                  painter: PhotoFramePainter(
-                                    style: _selectedFrame,
-                                    clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
-                                    dateText: dateText,
-                                    comment: _comment,
+                          child: _selectedFrame.isIllustrated
+                              ? _buildIllustratedPreview()
+                              : AspectRatio(
+                                  aspectRatio: 1 / _controller!.value.aspectRatio,
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      CameraPreview(_controller!),
+                                      CustomPaint(
+                                        painter: PhotoFramePainter(
+                                          style: _selectedFrame,
+                                          clubName:
+                                              _clubName.isEmpty ? '산악회 이름' : _clubName,
+                                          dateText: dateText,
+                                          comment: _comment,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
                         );
                       },
                     ),
@@ -216,6 +219,32 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             _buildControls(),
           ],
         ),
+      ),
+    );
+  }
+
+  // 일러스트 프레임(사찰/계곡)은 사진 전체를 감싸는 삽화라서 카메라 화면도
+  // 삽화의 가로세로 비율(가로로 넓음)에 맞춰야 한다 - 카메라 프리뷰는 기존에
+  // 검증된 세로 비율(1/aspectRatio)로 채운 뒤 cover로 잘라서 채워 넣는다.
+  Widget _buildIllustratedPreview() {
+    final camAspect = 1 / _controller!.value.aspectRatio;
+    return AspectRatio(
+      aspectRatio: illustratedFrameAspectRatio,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: 1000 * camAspect,
+                height: 1000,
+                child: CameraPreview(_controller!),
+              ),
+            ),
+          ),
+          Image.asset(_selectedFrame.assetPath!, fit: BoxFit.fill),
+        ],
       ),
     );
   }
@@ -254,20 +283,28 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                           borderRadius: BorderRadius.circular(8),
                         ),
                         clipBehavior: Clip.hardEdge,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Container(color: const Color(0xFF3A506B)),
-                            CustomPaint(
-                              painter: PhotoFramePainter(
-                                style: style,
-                                clubName: '산악회',
-                                dateText: '01.01',
-                                comment: '산행',
+                        child: style.isIllustrated
+                            ? Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Container(color: const Color(0xFF3A506B)),
+                                  Image.asset(style.assetPath!, fit: BoxFit.cover),
+                                ],
+                              )
+                            : Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Container(color: const Color(0xFF3A506B)),
+                                  CustomPaint(
+                                    painter: PhotoFramePainter(
+                                      style: style,
+                                      clubName: '산악회',
+                                      dateText: '01.01',
+                                      comment: '산행',
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(style.label,

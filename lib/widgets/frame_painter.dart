@@ -34,6 +34,11 @@ class PhotoFramePainter extends CustomPainter {
       case FrameStyle.ribbon:
         _paintRibbon(canvas, size);
         break;
+      case FrameStyle.templeValley:
+      case FrameStyle.lanternGorge:
+        // 일러스트 프레임은 이 페인터가 아니라 CameraScreen/PreviewScreen에서
+        // 직접 asset 이미지를 합성하는 별도 경로로 그려진다.
+        break;
     }
   }
 
