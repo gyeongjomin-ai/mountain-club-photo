@@ -172,6 +172,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _capture() async {
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized || _busy) return;
+    if (_selectedFrame.isIllustrated &&
+        MediaQuery.of(context).orientation != Orientation.landscape) {
+      return;
+    }
     setState(() => _busy = true);
     try {
       final file = await controller.takePicture();
@@ -218,9 +222,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                         if (snapshot.connectionState != ConnectionState.done) {
                           return const Center(child: CircularProgressIndicator());
                         }
+                        final isLandscapeDevice =
+                            MediaQuery.of(context).orientation == Orientation.landscape;
                         return Center(
                           child: _selectedFrame.isIllustrated
-                              ? _buildIllustratedPreview(dateText)
+                              ? (isLandscapeDevice
+                                  ? _buildIllustratedPreview(dateText)
+                                  : _buildRotatePrompt())
                               : AspectRatio(
                                   aspectRatio: 1 / _controller!.value.aspectRatio,
                                   child: Stack(
@@ -250,53 +258,56 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     );
   }
 
-  // 일러스트 프레임(사찰/계곡)은 사진 전체를 감싸는 삽화라서 카메라 화면도
-  // 삽화의 가로세로 비율(가로로 넓음)에 맞춰야 한다 - 카메라 프리뷰는 기존에
-  // 검증된 세로 비율(1/aspectRatio)로 채운 뒤 cover로 잘라서 채워 넣는다.
+  // 일러스트 프레임(사찰/계곡)은 가로로 넓은 삽화라서, 폰을 실제로 가로로 돌렸을 때만
+  // (이 위젯은 그 상태에서만 호출된다) 보여준다 - 카메라도 이제 실제로 가로로 찍히므로
+  // 삽화 비율과 크게 다르지 않아 cover로 채워도 세로 사진 때처럼 과하게 확대되지 않는다.
   Widget _buildIllustratedPreview(String dateText) {
-    final camAspect = 1 / _controller!.value.aspectRatio;
-    final hole = _selectedFrame.holeFraction!;
     return AspectRatio(
       aspectRatio: illustratedFrameAspectRatio,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final w = constraints.maxWidth;
-          final h = constraints.maxHeight;
-          final holeRect =
-              Rect.fromLTRB(hole[0] * w, hole[1] * h, hole[2] * w, hole[3] * h);
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              // 세로로 긴 카메라 화면을 가로로 넓은 창에 cover로 꽉 채우면 지나치게
-              // 확대돼 보이므로, 자르지 않고 창 안에 contain으로 통째로 넣는다.
-              Positioned.fromRect(
-                rect: holeRect,
-                child: Container(
-                  color: const Color(0xFFF0E6D2),
-                  child: ClipRect(
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: SizedBox(
-                        width: 1000 * camAspect,
-                        height: 1000,
-                        child: CameraPreview(_controller!),
-                      ),
-                    ),
-                  ),
-                ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox(
+                width: 1000 * _controller!.value.aspectRatio,
+                height: 1000,
+                child: CameraPreview(_controller!),
               ),
-              Image.asset(_selectedFrame.assetPath!, fit: BoxFit.fill),
-              CustomPaint(
-                painter: IllustratedCaptionPainter(
-                  style: _selectedFrame,
-                  clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
-                  dateText: dateText,
-                  comment: _comment,
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ),
+          Image.asset(_selectedFrame.assetPath!, fit: BoxFit.fill),
+          CustomPaint(
+            painter: IllustratedCaptionPainter(
+              style: _selectedFrame,
+              clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
+              dateText: dateText,
+              comment: _comment,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRotatePrompt() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.screen_rotation, color: Colors.white70, size: 56),
+          const SizedBox(height: 16),
+          Text('${_selectedFrame.label} 프레임은 가로 사진이에요',
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          const Text('폰을 가로로 돌려서 촬영해주세요',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+              textAlign: TextAlign.center),
+        ],
       ),
     );
   }
