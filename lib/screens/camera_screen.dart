@@ -8,8 +8,7 @@ import '../widgets/frame_painter.dart';
 import 'preview_screen.dart';
 
 class CameraScreen extends StatefulWidget {
-  final List<CameraDescription> cameras;
-  const CameraScreen({super.key, required this.cameras});
+  const CameraScreen({super.key});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -18,6 +17,8 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
   CameraController? _controller;
   Future<void>? _initFuture;
+  List<CameraDescription> _cameras = [];
+  bool _loadingCameras = true;
   FrameStyle _selectedFrame = FrameStyle.classic;
   String _clubName = '';
   String _comment = '';
@@ -27,8 +28,22 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initCamera();
+    // availableCameras()가 웹에서는 카메라 권한 팝업 응답을 기다리므로, main()에서
+    // 미리 기다리지 않고 여기서 첫 프레임이 그려진 뒤에 비동기로 가져온다 -
+    // 그래야 권한 응답 전에도 화면(로딩 UI)이 바로 보인다.
+    _loadCameras();
     _loadSettings();
+  }
+
+  Future<void> _loadCameras() async {
+    try {
+      _cameras = await availableCameras();
+    } catch (_) {
+      _cameras = [];
+    }
+    if (!mounted) return;
+    setState(() => _loadingCameras = false);
+    _initCamera();
   }
 
   Future<void> _loadSettings() async {
@@ -45,10 +60,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   }
 
   void _initCamera() {
-    if (widget.cameras.isEmpty) return;
-    final camera = widget.cameras.firstWhere(
+    if (_cameras.isEmpty) return;
+    final camera = _cameras.firstWhere(
       (c) => c.lensDirection == CameraLensDirection.back,
-      orElse: () => widget.cameras.first,
+      orElse: () => _cameras.first,
     );
     _controller = CameraController(camera, ResolutionPreset.max, enableAudio: false);
     _initFuture = _controller!.initialize();
@@ -131,7 +146,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         child: Column(
           children: [
             Expanded(
-              child: _controller == null
+              child: _loadingCameras
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white))
+                  : _controller == null
                   ? const Center(
                       child: Text('카메라를 찾을 수 없습니다',
                           style: TextStyle(color: Colors.white)))

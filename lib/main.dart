@@ -1,17 +1,8 @@
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import 'screens/camera_screen.dart';
 
-List<CameraDescription> _cameras = [];
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  try {
-    _cameras = await availableCameras();
-  } catch (_) {
-    _cameras = [];
-  }
+void main() {
   runApp(const MountainClubPhotoApp());
 }
 
@@ -30,7 +21,7 @@ class MountainClubPhotoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: CameraScreen(cameras: _cameras),
+      home: const CameraScreen(),
     );
   }
 }
