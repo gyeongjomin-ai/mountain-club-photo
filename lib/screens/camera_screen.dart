@@ -90,6 +90,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     if (controller == null || !controller.value.isInitialized) return;
     if (state == AppLifecycleState.inactive) {
       controller.dispose();
+      // 컨트롤러를 null로 비워둬야 다음 build()가 "카메라를 찾을 수 없습니다" 상태로
+      // 안전하게 떨어진다 - 그대로 두면 resumed로 돌아오기 전 프레임에서 이미
+      // dispose된 컨트롤러를 CameraPreview/AspectRatio가 계속 참조하게 된다.
+      setState(() {
+        _controller = null;
+        _initFuture = null;
+      });
     } else if (state == AppLifecycleState.resumed) {
       _initCamera();
     }
@@ -191,6 +198,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           ),
         ),
       );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('촬영 실패: $e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

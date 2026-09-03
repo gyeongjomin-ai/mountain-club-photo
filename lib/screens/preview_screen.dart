@@ -78,12 +78,13 @@ class _PreviewScreenState extends State<PreviewScreen> {
     return byteData!.buffer.asUint8List();
   }
 
-  // 사찰/계곡 프레임은 사진 위에 얇은 테두리를 그리는 방식이 아니라, 가운데가
-  // 뚫린 삽화 전체가 캔버스를 채우는 방식이다. 이제 이 프레임은 폰을 실제로
-  // 가로로 돌렸을 때만 촬영되므로 사진도 삽화와 비슷한 가로 비율이라 cover로
-  // 꽉 채워도 크게 잘리지 않는다. 혹시라도 비율 차이가 크면(예: 세로 사진이
-  // 넘어온 경우) 억지로 잘라 과하게 확대되는 대신, 창 안에 contain으로 통째로
-  // 넣어서(빈 여백은 삽화 배경톤으로 채움) 안전하게 보여준다.
+  // 사찰/계곡/강구항 프레임은 사진 위에 얇은 테두리를 그리는 방식이 아니라, 가운데가
+  // 뚫린 삽화 전체가 캔버스를 채우는 방식이다. 라이브 카메라 화면(CameraScreen)에서
+  // 항상 사진 전체를 창 안에 contain으로 보여주므로, 여기서도 동일하게 창 안에
+  // contain으로만 넣어야 촬영 화면과 저장된 사진의 구도가 일치한다. 예전에는 사진
+  // 비율이 창 비율과 비슷하면 카드 전체를 cover로 꽉 채우는 경로가 따로 있었지만,
+  // 그러면 화면에서 본 것보다 사진이 크게 잘려 보여서(특히 세로 카드인 강구항에서
+  // 세로 사진을 찍을 때 자주 발생) 제거했다.
   Future<Uint8List> _composeIllustrated(ui.Image image, double width, double height) async {
     final assetData = await rootBundle.load(widget.frameStyle.assetPath!);
     final frameCodec = await ui.instantiateImageCodec(assetData.buffer.asUint8List());
@@ -96,37 +97,22 @@ class _PreviewScreenState extends State<PreviewScreen> {
     canvas.drawRect(
         Rect.fromLTWH(0, 0, outW, outH), Paint()..color = const Color(0xFFF0E6D2));
 
-    final photoAspect = width / height;
-    final canvasAspect = outW / outH;
-    final aspectMismatch = (photoAspect / canvasAspect - 1).abs();
-    if (aspectMismatch < 0.35) {
-      final Rect srcRect;
-      if (photoAspect > canvasAspect) {
-        final cropWidth = height * canvasAspect;
-        srcRect = Rect.fromLTWH((width - cropWidth) / 2, 0, cropWidth, height);
-      } else {
-        final cropHeight = width / canvasAspect;
-        srcRect = Rect.fromLTWH(0, (height - cropHeight) / 2, width, cropHeight);
-      }
-      canvas.drawImageRect(image, srcRect, Rect.fromLTWH(0, 0, outW, outH), Paint());
-    } else {
-      final hole = widget.frameStyle.holeFraction!;
-      final holeRect = Rect.fromLTRB(
-          hole[0] * outW, hole[1] * outH, hole[2] * outW, hole[3] * outH);
-      final scale = (holeRect.width / width < holeRect.height / height)
-          ? holeRect.width / width
-          : holeRect.height / height;
-      final destW = width * scale;
-      final destH = height * scale;
-      final destRect = Rect.fromLTWH(
-        holeRect.left + (holeRect.width - destW) / 2,
-        holeRect.top + (holeRect.height - destH) / 2,
-        destW,
-        destH,
-      );
-      canvas.drawImageRect(
-          image, Rect.fromLTWH(0, 0, width, height), destRect, Paint());
-    }
+    final hole = widget.frameStyle.holeFraction!;
+    final holeRect = Rect.fromLTRB(
+        hole[0] * outW, hole[1] * outH, hole[2] * outW, hole[3] * outH);
+    final scale = (holeRect.width / width < holeRect.height / height)
+        ? holeRect.width / width
+        : holeRect.height / height;
+    final destW = width * scale;
+    final destH = height * scale;
+    final destRect = Rect.fromLTWH(
+      holeRect.left + (holeRect.width - destW) / 2,
+      holeRect.top + (holeRect.height - destH) / 2,
+      destW,
+      destH,
+    );
+    canvas.drawImageRect(
+        image, Rect.fromLTWH(0, 0, width, height), destRect, Paint());
     canvas.drawImage(frameImage, Offset.zero, Paint());
 
     IllustratedCaptionPainter(
