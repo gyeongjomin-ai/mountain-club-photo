@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsService {
   static const _keyClubName = 'club_name';
   static const _keyComment = 'comment';
-  static const _keyFrameIndex = 'frame_index';
   static const _keyClubNameHistory = 'club_name_history';
   static const _keyCommentHistory = 'comment_history';
   static const _maxHistoryEntries = 20;
@@ -67,15 +66,5 @@ class SettingsService {
       history.removeRange(_maxHistoryEntries, history.length);
     }
     await prefs.setStringList(key, history);
-  }
-
-  static Future<int> loadFrameIndex() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyFrameIndex) ?? 0;
-  }
-
-  static Future<void> saveFrameIndex(int value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyFrameIndex, value);
   }
 }

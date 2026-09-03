@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../models/frame_style.dart';
 import '../services/settings_service.dart';
 import '../widgets/frame_painter.dart';
-import '../widgets/illustrated_caption_painter.dart';
 import 'preview_screen.dart';
 
 class CameraScreen extends StatefulWidget {
@@ -20,7 +19,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void>? _initFuture;
   List<CameraDescription> _cameras = [];
   bool _loadingCameras = true;
-  FrameStyle _selectedFrame = FrameStyle.classic;
   String _clubName = '';
   String _comment = '';
   List<String> _clubNameHistory = [];
@@ -52,15 +50,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _loadSettings() async {
     final clubName = await SettingsService.loadClubName();
     final comment = await SettingsService.loadComment();
-    final frameIndex = await SettingsService.loadFrameIndex();
     final clubNameHistory = await SettingsService.loadClubNameHistory();
     final commentHistory = await SettingsService.loadCommentHistory();
     if (!mounted) return;
     setState(() {
       _clubName = clubName;
       _comment = comment;
-      _selectedFrame =
-          FrameStyle.values[frameIndex.clamp(0, FrameStyle.values.length - 1)];
       _clubNameHistory = clubNameHistory;
       _commentHistory = commentHistory;
     });
@@ -192,7 +187,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         MaterialPageRoute(
           builder: (_) => PreviewScreen(
             imageBytes: bytes,
-            frameStyle: _selectedFrame,
+            frameStyle: FrameStyle.classic,
             clubName: _clubName,
             comment: _comment,
           ),
@@ -230,28 +225,24 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                         if (snapshot.connectionState != ConnectionState.done) {
                           return const Center(child: CircularProgressIndicator());
                         }
+                        // CameraPreview 위젯 자체가 현재 기기 방향(portrait/landscape)에
+                        // 맞는 가로세로 비율을 이미 계산해준다 - 그 바깥에 다시
+                        // 1/aspectRatio로 세로를 강제하는 AspectRatio를 씌우면, 웹처럼
+                        // aspectRatio 값이 플랫폼마다 다르게 보고되는 환경에서 두 비율
+                        // 계산이 충돌해 미리보기가 찌그러져 보이는 문제가 생긴다.
+                        // child로 프레임을 얹어서 CameraPreview가 직접 크기를 정하게 둔다.
                         return Center(
-                          child: _selectedFrame.isIllustrated
-                              ? _buildIllustratedPreview(dateText)
-                              // CameraPreview 위젯 자체가 현재 기기 방향(portrait/landscape)에
-                              // 맞는 가로세로 비율을 이미 계산해준다 - 그 바깥에 다시
-                              // 1/aspectRatio로 세로를 강제하는 AspectRatio를 씌우면, 웹처럼
-                              // aspectRatio 값이 플랫폼마다 다르게 보고되는 환경에서 두 비율
-                              // 계산이 충돌해 미리보기가 화면 가운데에 작은 가로 박스로
-                              // 찌그러져 보이는 문제가 생긴다. child로 프레임을 얹어서
-                              // CameraPreview가 직접 크기를 정하게 둔다.
-                              : CameraPreview(
-                                  _controller!,
-                                  child: CustomPaint(
-                                    painter: PhotoFramePainter(
-                                      style: _selectedFrame,
-                                      clubName:
-                                          _clubName.isEmpty ? '산악회 이름' : _clubName,
-                                      dateText: dateText,
-                                      comment: _comment,
-                                    ),
-                                  ),
-                                ),
+                          child: CameraPreview(
+                            _controller!,
+                            child: CustomPaint(
+                              painter: PhotoFramePainter(
+                                style: FrameStyle.classic,
+                                clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
+                                dateText: dateText,
+                                comment: _comment,
+                              ),
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -263,57 +254,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     );
   }
 
-  // 일러스트 프레임(사찰/계곡)은 사진이 들어갈 창이 가로로 넓게 뚫려 있다.
-  // 폰을 돌리라고 요구하지 않고, 세로로 찍히는 카메라 화면을 자르지 않은 채
-  // 그 창 안에 contain으로 통째로 넣는다(창보다 남는 자리는 배경 톤으로 채움) -
-  // 그래서 사진이 배경(삽화) 앞에 있는 그대로, 과하게 확대되지도 않고 항상
-  // 라이브 카메라가 바로 보인다.
-  Widget _buildIllustratedPreview(String dateText) {
-    final camAspect = 1 / _controller!.value.aspectRatio;
-    final hole = _selectedFrame.holeFraction!;
-    return AspectRatio(
-      aspectRatio: _selectedFrame.frameAspectRatio,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final w = constraints.maxWidth;
-          final h = constraints.maxHeight;
-          final holeRect =
-              Rect.fromLTRB(hole[0] * w, hole[1] * h, hole[2] * w, hole[3] * h);
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              Positioned.fromRect(
-                rect: holeRect,
-                child: Container(
-                  color: const Color(0xFFF0E6D2),
-                  child: ClipRect(
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: SizedBox(
-                        width: 1000 * camAspect,
-                        height: 1000,
-                        child: CameraPreview(_controller!),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Image.asset(_selectedFrame.assetPath!, fit: BoxFit.fill),
-              CustomPaint(
-                painter: IllustratedCaptionPainter(
-                  style: _selectedFrame,
-                  clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
-                  dateText: dateText,
-                  comment: _comment,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildControls() {
     return Container(
       color: Colors.black,
@@ -321,66 +261,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            height: 74,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: FrameStyle.values.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (context, index) {
-                final style = FrameStyle.values[index];
-                final selected = style == _selectedFrame;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedFrame = style);
-                    SettingsService.saveFrameIndex(index);
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              color: selected ? Colors.amber : Colors.white24,
-                              width: selected ? 2.5 : 1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        clipBehavior: Clip.hardEdge,
-                        child: style.isIllustrated
-                            ? Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  Container(color: const Color(0xFF3A506B)),
-                                  Image.asset(style.assetPath!, fit: BoxFit.cover),
-                                ],
-                              )
-                            : Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  Container(color: const Color(0xFF3A506B)),
-                                  CustomPaint(
-                                    painter: PhotoFramePainter(
-                                      style: style,
-                                      clubName: '산악회',
-                                      dateText: '01.01',
-                                      comment: '산행',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(style.label,
-                          style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
