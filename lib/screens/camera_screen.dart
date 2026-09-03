@@ -233,22 +233,23 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                         return Center(
                           child: _selectedFrame.isIllustrated
                               ? _buildIllustratedPreview(dateText)
-                              : AspectRatio(
-                                  aspectRatio: 1 / _controller!.value.aspectRatio,
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      CameraPreview(_controller!),
-                                      CustomPaint(
-                                        painter: PhotoFramePainter(
-                                          style: _selectedFrame,
-                                          clubName:
-                                              _clubName.isEmpty ? '산악회 이름' : _clubName,
-                                          dateText: dateText,
-                                          comment: _comment,
-                                        ),
-                                      ),
-                                    ],
+                              // CameraPreview 위젯 자체가 현재 기기 방향(portrait/landscape)에
+                              // 맞는 가로세로 비율을 이미 계산해준다 - 그 바깥에 다시
+                              // 1/aspectRatio로 세로를 강제하는 AspectRatio를 씌우면, 웹처럼
+                              // aspectRatio 값이 플랫폼마다 다르게 보고되는 환경에서 두 비율
+                              // 계산이 충돌해 미리보기가 화면 가운데에 작은 가로 박스로
+                              // 찌그러져 보이는 문제가 생긴다. child로 프레임을 얹어서
+                              // CameraPreview가 직접 크기를 정하게 둔다.
+                              : CameraPreview(
+                                  _controller!,
+                                  child: CustomPaint(
+                                    painter: PhotoFramePainter(
+                                      style: _selectedFrame,
+                                      clubName:
+                                          _clubName.isEmpty ? '산악회 이름' : _clubName,
+                                      dateText: dateText,
+                                      comment: _comment,
+                                    ),
                                   ),
                                 ),
                         );
