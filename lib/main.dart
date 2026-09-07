@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'screens/camera_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,7 +36,7 @@ class MountainClubPhotoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const CameraScreen(),
+      home: const HomeScreen(),
     );
   }
 }
