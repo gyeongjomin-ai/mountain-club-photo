@@ -19,6 +19,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void>? _initFuture;
   List<CameraDescription> _cameras = [];
   bool _loadingCameras = true;
+  FrameStyle _selectedFrame = FrameStyle.classic;
   String _clubName = '';
   String _comment = '';
   List<String> _clubNameHistory = [];
@@ -50,12 +51,14 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _loadSettings() async {
     final clubName = await SettingsService.loadClubName();
     final comment = await SettingsService.loadComment();
+    final frameIndex = await SettingsService.loadFrameIndex();
     final clubNameHistory = await SettingsService.loadClubNameHistory();
     final commentHistory = await SettingsService.loadCommentHistory();
     if (!mounted) return;
     setState(() {
       _clubName = clubName;
       _comment = comment;
+      _selectedFrame = FrameStyle.values[frameIndex.clamp(0, FrameStyle.values.length - 1)];
       _clubNameHistory = clubNameHistory;
       _commentHistory = commentHistory;
     });
@@ -187,7 +190,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         MaterialPageRoute(
           builder: (_) => PreviewScreen(
             imageBytes: bytes,
-            frameStyle: FrameStyle.classic,
+            frameStyle: _selectedFrame,
             clubName: _clubName,
             comment: _comment,
           ),
@@ -236,7 +239,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                             _controller!,
                             child: CustomPaint(
                               painter: PhotoFramePainter(
-                                style: FrameStyle.classic,
+                                style: _selectedFrame,
                                 clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
                                 dateText: dateText,
                                 comment: _comment,
