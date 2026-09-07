@@ -29,12 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
       if (picked == null) return;
       final bytes = await picked.readAsBytes();
 
-      // 카메라 화면에서 골랐던 프레임/산악회 이름/한마디를 그대로 이어받아,
+      // 카메라 화면에서 저장했던 산악회 이름/한마디를 그대로 이어받아,
       // 불러온 사진에도 같은 설정으로 바로 합성 미리보기를 보여준다.
-      final frameIndex = await SettingsService.loadFrameIndex();
       final clubName = await SettingsService.loadClubName();
       final comment = await SettingsService.loadComment();
-      final frameStyle = FrameStyle.values[frameIndex.clamp(0, FrameStyle.values.length - 1)];
 
       if (!mounted) return;
       await Navigator.push(
@@ -42,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
         MaterialPageRoute(
           builder: (_) => PreviewScreen(
             imageBytes: bytes,
-            frameStyle: frameStyle,
+            frameStyle: FrameStyle.classic,
             clubName: clubName,
             comment: comment,
           ),
