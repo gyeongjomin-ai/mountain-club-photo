@@ -14,7 +14,8 @@ class CameraScreen extends StatefulWidget {
   State<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
+class _CameraScreenState extends State<CameraScreen>
+    with WidgetsBindingObserver {
   CameraController? _controller;
   Future<void>? _initFuture;
   List<CameraDescription> _cameras = [];
@@ -58,7 +59,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     setState(() {
       _clubName = clubName;
       _comment = comment;
-      _selectedFrame = FrameStyle.values[frameIndex.clamp(0, FrameStyle.values.length - 1)];
+      _selectedFrame =
+          FrameStyle.values[frameIndex.clamp(0, FrameStyle.values.length - 1)];
       _clubNameHistory = clubNameHistory;
       _commentHistory = commentHistory;
     });
@@ -70,7 +72,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       (c) => c.lensDirection == CameraLensDirection.back,
       orElse: () => _cameras.first,
     );
-    _controller = CameraController(camera, ResolutionPreset.max, enableAudio: false);
+    _controller = CameraController(
+      camera,
+      ResolutionPreset.max,
+      enableAudio: false,
+    );
     _initFuture = _controller!.initialize();
     setState(() {});
   }
@@ -110,12 +116,20 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
-        content: TextField(controller: controller, autofocus: true, maxLength: 30),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 30,
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, controller.text),
-              child: const Text('저장')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('저장'),
+          ),
         ],
       ),
     );
@@ -140,7 +154,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             child: items.isEmpty
                 ? const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('저장된 항목이 없습니다', style: TextStyle(color: Colors.grey)),
+                    child: Text(
+                      '저장된 항목이 없습니다',
+                      style: TextStyle(color: Colors.grey),
+                    ),
                   )
                 : ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: 320),
@@ -166,7 +183,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('닫기')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('닫기'),
+            ),
           ],
         ),
       ),
@@ -212,45 +232,63 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            Expanded(
-              child: _loadingCameras
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Colors.white))
-                  : _controller == null
-                  ? const Center(
-                      child: Text('카메라를 찾을 수 없습니다',
-                          style: TextStyle(color: Colors.white)))
-                  : FutureBuilder<void>(
-                      future: _initFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState != ConnectionState.done) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        // CameraPreview 위젯 자체가 현재 기기 방향(portrait/landscape)에
-                        // 맞는 가로세로 비율을 이미 계산해준다 - 그 바깥에 다시
-                        // 1/aspectRatio로 세로를 강제하는 AspectRatio를 씌우면, 웹처럼
-                        // aspectRatio 값이 플랫폼마다 다르게 보고되는 환경에서 두 비율
-                        // 계산이 충돌해 미리보기가 찌그러져 보이는 문제가 생긴다.
-                        // child로 프레임을 얹어서 CameraPreview가 직접 크기를 정하게 둔다.
-                        return Center(
-                          child: CameraPreview(
-                            _controller!,
-                            child: CustomPaint(
-                              painter: PhotoFramePainter(
-                                style: _selectedFrame,
-                                clubName: _clubName.isEmpty ? '산악회 이름' : _clubName,
-                                dateText: dateText,
-                                comment: _comment,
-                              ),
-                            ),
+            Column(
+              children: [
+                Expanded(
+                  child: _loadingCameras
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                      : _controller == null
+                      ? const Center(
+                          child: Text(
+                            '카메라를 찾을 수 없습니다',
+                            style: TextStyle(color: Colors.white),
                           ),
-                        );
-                      },
-                    ),
+                        )
+                      : FutureBuilder<void>(
+                          future: _initFuture,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState !=
+                                ConnectionState.done) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            // CameraPreview 위젯 자체가 현재 기기 방향(portrait/landscape)에
+                            // 맞는 가로세로 비율을 이미 계산해준다 - 그 바깥에 다시
+                            // 1/aspectRatio로 세로를 강제하는 AspectRatio를 씌우면, 웹처럼
+                            // aspectRatio 값이 플랫폼마다 다르게 보고되는 환경에서 두 비율
+                            // 계산이 충돌해 미리보기가 찌그러져 보이는 문제가 생긴다.
+                            // child로 프레임을 얹어서 CameraPreview가 직접 크기를 정하게 둔다.
+                            return Center(
+                              child: CameraPreview(
+                                _controller!,
+                                child: CustomPaint(
+                                  painter: PhotoFramePainter(
+                                    style: _selectedFrame,
+                                    clubName: _clubName.isEmpty
+                                        ? '산악회 이름'
+                                        : _clubName,
+                                    dateText: dateText,
+                                    comment: _comment,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                _buildControls(),
+              ],
             ),
-            _buildControls(),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: _BackButton(onTap: () => Navigator.pop(context)),
+            ),
           ],
         ),
       ),
@@ -284,18 +322,20 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               _miniButton(
                 icon: Icons.groups,
                 label: '나의 산악회',
-                onTap: () => _pickFromHistory(
-                  title: '나의 산악회',
-                  history: _clubNameHistory,
-                  removeItem: SettingsService.removeClubNameFromHistory,
-                  onSelect: (value) async {
-                    setState(() => _clubName = value);
-                    await SettingsService.saveClubName(value);
-                  },
-                ).then((_) async {
-                  final history = await SettingsService.loadClubNameHistory();
-                  if (mounted) setState(() => _clubNameHistory = history);
-                }),
+                onTap: () =>
+                    _pickFromHistory(
+                      title: '나의 산악회',
+                      history: _clubNameHistory,
+                      removeItem: SettingsService.removeClubNameFromHistory,
+                      onSelect: (value) async {
+                        setState(() => _clubName = value);
+                        await SettingsService.saveClubName(value);
+                      },
+                    ).then((_) async {
+                      final history =
+                          await SettingsService.loadClubNameHistory();
+                      if (mounted) setState(() => _clubNameHistory = history);
+                    }),
               ),
               GestureDetector(
                 onTap: _capture,
@@ -309,7 +349,9 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   ),
                   child: _busy
                       ? const Padding(
-                          padding: EdgeInsets.all(20), child: CircularProgressIndicator())
+                          padding: EdgeInsets.all(20),
+                          child: CircularProgressIndicator(),
+                        )
                       : null,
                 ),
               ),
@@ -330,18 +372,20 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               _miniButton(
                 icon: Icons.bookmark,
                 label: '나의 멘트',
-                onTap: () => _pickFromHistory(
-                  title: '나의 멘트',
-                  history: _commentHistory,
-                  removeItem: SettingsService.removeCommentFromHistory,
-                  onSelect: (value) async {
-                    setState(() => _comment = value);
-                    await SettingsService.saveComment(value);
-                  },
-                ).then((_) async {
-                  final history = await SettingsService.loadCommentHistory();
-                  if (mounted) setState(() => _commentHistory = history);
-                }),
+                onTap: () =>
+                    _pickFromHistory(
+                      title: '나의 멘트',
+                      history: _commentHistory,
+                      removeItem: SettingsService.removeCommentFromHistory,
+                      onSelect: (value) async {
+                        setState(() => _comment = value);
+                        await SettingsService.saveComment(value);
+                      },
+                    ).then((_) async {
+                      final history =
+                          await SettingsService.loadCommentHistory();
+                      if (mounted) setState(() => _commentHistory = history);
+                    }),
               ),
             ],
           ),
@@ -372,6 +416,28 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black.withValues(alpha: 0.45),
+        ),
+        child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
       ),
     );
   }

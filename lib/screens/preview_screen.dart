@@ -53,7 +53,11 @@ class _PreviewScreenState extends State<PreviewScreen> {
     setState(() => _composed = bytes);
   }
 
-  Future<Uint8List> _composePainted(ui.Image image, double width, double height) async {
+  Future<Uint8List> _composePainted(
+    ui.Image image,
+    double width,
+    double height,
+  ) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, width, height));
     canvas.drawImage(image, Offset.zero, Paint());
@@ -67,7 +71,9 @@ class _PreviewScreenState extends State<PreviewScreen> {
 
     final picture = recorder.endRecording();
     final outputImage = await picture.toImage(width.toInt(), height.toInt());
-    final byteData = await outputImage.toByteData(format: ui.ImageByteFormat.png);
+    final byteData = await outputImage.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     return byteData!.buffer.asUint8List();
   }
 
@@ -78,7 +84,10 @@ class _PreviewScreenState extends State<PreviewScreen> {
     // 호출하면 예외가 나므로, 미리보기 확인용 웹 빌드에서는 안내만 보여준다.
     if (kIsWeb) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('웹 미리보기에서는 갤러리 저장을 지원하지 않습니다. 앱(APK/iOS)에서 저장해주세요.')));
+        const SnackBar(
+          content: Text('웹 미리보기에서는 갤러리 저장을 지원하지 않습니다. 앱(APK/iOS)에서 저장해주세요.'),
+        ),
+      );
       return;
     }
     setState(() => _saving = true);
@@ -116,43 +125,85 @@ class _PreviewScreenState extends State<PreviewScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            Expanded(
-              child: Center(
-                child: _composed == null
-                    ? const CircularProgressIndicator()
-                    : Image.memory(_composed!),
-              ),
+            Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: _composed == null
+                        ? const CircularProgressIndicator()
+                        : Image.memory(_composed!),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _saving
+                            ? null
+                            : () => Navigator.pop(context),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('다시 찍기'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white54),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _composed == null || _saving ? null : _save,
+                        icon: _saving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.download),
+                        label: const Text('저장'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _saving ? null : () => Navigator.pop(context),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('다시 찍기'),
-                    style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.white54)),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: _composed == null || _saving ? null : _save,
-                    icon: _saving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.download),
-                    label: const Text('저장'),
-                  ),
-                ],
+            Positioned(
+              top: 8,
+              left: 8,
+              child: _BackButton(
+                onTap: _saving ? null : () => Navigator.pop(context),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  final VoidCallback? onTap;
+
+  const _BackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black.withValues(alpha: onTap == null ? 0.2 : 0.45),
+        ),
+        child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
       ),
     );
   }
